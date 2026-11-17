@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-sm mb-3">&larr; Back to Dashboard</a>
+<h4>Manage Examination: {{ exam.exam_name }} ({{ exam.course.course_code }})</h4>
+
+<div class="row g-4 mt-2">
+    <!-- Edit Examination & Timeline Form -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header fw-bold">Edit Examination Details & Timelines</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_edit_examination_details', exam_id=exam.id) }}">
+                    <div class="mb-2">
+                        <label class="form-label small">Exam Name</label>
+                        <input type="text" name="exam_name" value="{{ exam.exam_name }}" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label small">Type</label>
+                            <select name="exam_type" class="form-select form-select-sm">
+                                <option {% if exam.exam_type == 'Viva' %}selected{% endif %}>Viva</option>
+                                <option {% if exam.exam_type == 'Practical' %}selected{% endif %}>Practical</option>
+                                <option {% if exam.exam_type == 'Project Demo' %}selected{% endif %}>Project Demo</option>
+                                <option {% if exam.exam_type == 'Assessment' %}selected{% endif %}>Assessment</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Duration (mins)</label>
+                            <input type="number" name="duration_mins" value="{{ exam.duration_mins }}" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Max Marks</label>
+                            <input type="number" step="0.5" name="max_marks" value="{{ exam.max_marks }}" class="form-control form-control-sm" required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2 small">
+                        <div class="col-md-6">
+                            <label class="form-label">Slot Creation Start</label>
+                            <input type="datetime-local" name="slot_creation_start" value="{{ exam.slot_creation_start.strftime('%Y-%m-%dT%H:%M') }}" class="form-control form-control-sm mb-1" required>
+                            <label class="form-label">Slot Creation End</label>
+                            <input type="datetime-local" name="slot_creation_end" value="{{ exam.slot_creation_end.strftime('%Y-%m-%dT%H:%M') }}" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Student Booking Start</label>
+                            <input type="datetime-local" name="slot_booking_start" value="{{ exam.slot_booking_start.strftime('%Y-%m-%dT%H:%M') }}" class="form-control form-control-sm mb-1" required>
+                            <label class="form-label">Student Booking End</label>
+                            <input type="datetime-local" name="slot_booking_end" value="{{ exam.slot_booking_end.strftime('%Y-%m-%dT%H:%M') }}" class="form-control form-control-sm" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Status Phase</label>
+                        <select name="status" class="form-select form-select-sm">
+                            {% for st in ['Draft', 'Slot Creation', 'Booking Open', 'Closed', 'Completed'] %}
+                            <option value="{{ st }}" {% if exam.status == st %}selected{% endif %}>{{ st }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Save Examination Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rubrics Management Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header fw-bold">Examination Rubrics (Max Marks: {{ exam.max_marks }})</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_manage_exam', exam_id=exam.id) }}" class="row g-2 mb-3">
+                    <input type="hidden" name="action" value="add_rubric">
+                    <div class="col-md-5"><input type="text" name="criterion_name" class="form-control form-control-sm" placeholder="Criterion Name" required></div>
+                    <div class="col-md-3"><input type="number" step="0.5" name="max_marks" class="form-control form-control-sm" placeholder="Marks" required></div>
+                    <div class="col-md-4"><button class="btn btn-success btn-sm w-100">+ Add Rubric</button></div>
+                </form>
+                <table class="table table-bordered table-sm">
+                    <thead><tr><th>Criterion</th><th>Max Marks</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for r in exam.rubrics %}
+                        <tr>
+                            <td>{{ r.criterion_name }}</td>
+                            <td>{{ r.max_marks }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin_manage_exam', exam_id=exam.id) }}" class="row g-2 mb-3">
+                                    <div class="col-md-4">
+                                        <input type="text" name="criterion_name" class="form-control" placeholder="Criterion Name (e.g. Logic)" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <input type="text" name="description" class="form-control" placeholder="Description (optional)">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <input type="number" step="0.5" name="max_marks" class="form-control" placeholder="Max Marks" required>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="submit" class="btn btn-success w-100">Delete</button>
+                                    </div>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

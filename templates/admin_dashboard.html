@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">Admin Dashboard</h3>
+
+<!-- Summary Metrics -->
+<div class="row g-3 mb-4 text-center">
+    <div class="col-md-2"><div class="card p-3"><h6>Courses</h6><h3>{{ stats.courses }}</h3></div></div>
+    <div class="col-md-2"><div class="card p-3"><h6>Exams</h6><h3>{{ stats.exams }}</h3></div></div>
+    <div class="col-md-2"><div class="card p-3"><h6>Examiners</h6><h3>{{ stats.examiners }}</h3></div></div>
+    <div class="col-md-2"><div class="card p-3"><h6>Students</h6><h3>{{ stats.students }}</h3></div></div>
+    <div class="col-md-2"><div class="card p-3"><h6>Slots</h6><h3>{{ stats.slots }}</h3></div></div>
+    <div class="col-md-2"><div class="card p-3"><h6>Bookings</h6><h3>{{ stats.bookings }}</h3></div></div>
+</div>
+
+<!-- Search Bar -->
+<form method="GET" class="row g-2 mb-4">
+    <div class="col-md-10">
+        <input type="text" name="q" value="{{ search_q }}" class="form-control" placeholder="Search exams, examiners, students, or bookings by name or ID...">
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-dark w-100">Search</button>
+    </div>
+</form>
+
+<!-- Courses & Examinations Creation -->
+<div class="row g-4 mb-4">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header fw-bold">Create Course</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_add_course') }}">
+                    <input type="text" name="course_code" class="form-control mb-2" placeholder="Course Code (e.g., CS301)" required>
+                    <input type="text" name="course_name" class="form-control mb-2" placeholder="Course Name" required>
+                    <textarea name="description" class="form-control mb-2" placeholder="Description"></textarea>
+                    <button type="submit" class="btn btn-primary btn-sm">Add Course</button>
+                </form>
+                <hr>
+                <ul class="list-group list-group-flush">
+                    {% for c in courses %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span><strong>{{ c.course_code }}</strong> - {{ c.course_name }}</span>
+                        <form method="POST" action="{{ url_for('admin_delete_course', course_id=c.id) }}">
+                            <button class="btn btn-outline-danger btn-sm">Remove</button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header fw-bold">Schedule New Examination</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_add_exam') }}">
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <select name="course_id" class="form-select" required>
+                                <option value="">Select Course...</option>
+                                {% for c in courses %}<option value="{{ c.id }}">{{ c.course_code }} - {{ c.course_name }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" name="exam_name" class="form-control" placeholder="Examination Name" required>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <select name="exam_type" class="form-select">
+                                <option>Viva</option><option>Practical</option><option>Project Demo</option><option>Assessment</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4"><input type="number" name="duration_mins" class="form-control" placeholder="Duration (mins)" required></div>
+                        <div class="col-md-4"><input type="number" step="0.5" name="max_marks" class="form-control" placeholder="Max Marks" required></div>
+                    </div>
+                    <div class="row g-2 mb-2 small">
+                        <div class="col-md-6"><label>Slot Creation Start</label><input type="datetime-local" name="slot_creation_start" class="form-control" required></div>
+                        <div class="col-md-6"><label>Slot Creation End</label><input type="datetime-local" name="slot_creation_end" class="form-control" required></div>
+                        <div class="col-md-6"><label>Student Booking Start</label><input type="datetime-local" name="slot_booking_start" class="form-control" required></div>
+                        <div class="col-md-6"><label>Student Booking End</label><input type="datetime-local" name="slot_booking_end" class="form-control" required></div>
+                    </div>
+                    <div class="mb-2">
+                        <select name="status" class="form-select">
+                            <option value="Draft">Draft</option>
+                            <option value="Slot Creation">Open Slot Creation</option>
+                            <option value="Booking Open">Open Student Booking</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-success btn-sm">Create Examination</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Examinations Management Table -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">Examinations</div>
+    <div class="table-responsive">
+        <table class="table table-striped mb-0 align-middle">
+            <thead><tr><th>ID</th><th>Course</th><th>Exam Name</th><th>Type</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for e in exams %}
+                <tr>
+                    <td>{{ e.id }}</td>
+                    <td>{{ e.course.course_code }}</td>
+                    <td>{{ e.exam_name }}</td>
+                    <td>{{ e.exam_type }}</td>
+                    <td><span class="badge bg-info text-dark">{{ e.status }}</span></td>
+                    <td class="d-flex gap-2">
+                        <a href="{{ url_for('admin_manage_exam', exam_id=e.id) }}" class="btn btn-primary btn-sm">Rubrics & Status</a>
+                        <form method="POST" action="{{ url_for('admin_delete_exam', exam_id=e.id) }}">
+                            <button class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Examiner Approval & Management -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">Examiner Approvals & Roster</div>
+    <div class="table-responsive">
+        <table class="table table-bordered mb-0 align-middle">
+            <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Department</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+                {% for ex in examiners %}
+                <tr>
+                    <td>{{ ex.id }}</td>
+                    <td>{{ ex.full_name }}</td>
+                    <td>{{ ex.email }}</td>
+                    <td>{{ ex.department }}</td>
+                    <td><span class="badge bg-{{ 'success' if ex.status=='Active' else 'warning' }}">{{ ex.status }}</span></td>
+                    <td>
+                        <form method="POST" action="{{ url_for('admin_examiner_status', user_id=ex.id) }}" class="d-flex gap-1">
+                            <select name="status" class="form-select form-select-sm w-auto">
+                                <option value="Active" {% if ex.status=='Active' %}selected{% endif %}>Approve / Active</option>
+                                <option value="Deactivated" {% if ex.status=='Deactivated' %}selected{% endif %}>Deactivate</option>
+                            </select>
+                            <button class="btn btn-sm btn-dark">Save</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- All Slots & Examiner Reassignment -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">All Examination Slots (Reassign Examiner)</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead><tr><th>Slot ID</th><th>Exam</th><th>Date & Time</th><th>Seats</th><th>Current Examiner</th><th>Reassign</th></tr></thead>
+            <tbody>
+                {% for s in slots %}
+                <tr>
+                    <td>{{ s.id }}</td>
+                    <td>{{ s.examination.exam_name }}</td>
+                    <td>{{ s.date }} ({{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }})</td>
+                    <td>{{ s.available_seats }}/{{ s.max_capacity }} ({{ s.status }})</td>
+                    <td>{{ s.examiner.full_name }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('admin_reassign_examiner', slot_id=s.id) }}" class="d-flex gap-1">
+                            <select name="examiner_id" class="form-select form-select-sm w-auto">
+                                {% for ex in examiners if ex.status == 'Active' %}
+                                <option value="{{ ex.id }}" {% if ex.id == s.examiner_id %}selected{% endif %}>{{ ex.full_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-sm btn-outline-primary">Assign</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Direct Examiner Addition Form -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">Add New Examiner Directly</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin_add_examiner') }}" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="full_name" class="form-control form-control-sm" placeholder="Full Name" required>
+            </div>
+            <div class="col-md-3">
+                <input type="email" name="email" class="form-control form-control-sm" placeholder="Email Address" required>
+            </div>
+            <div class="col-md-2">
+                <input type="password" name="password" class="form-control form-control-sm" placeholder="Initial Password" required>
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="department" class="form-control form-control-sm" placeholder="Department" required>
+            </div>
+            <div class="col-md-2">
+                <input type="text" name="contact" class="form-control form-control-sm" placeholder="Contact No." required>
+            </div>
+            <div class="col-12 mt-2">
+                <button type="submit" class="btn btn-primary btn-sm">Add Examiner</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bookings & Rescheduling -->
+<div class="card">
+    <div class="card-header fw-bold">Student Bookings (Reschedule)</div>
+    <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+            <thead><tr><th>Booking ID</th><th>Student</th><th>Exam</th><th>Current Slot</th><th>Status</th><th>Reschedule To Slot</th></tr></thead>
+            <tbody>
+                {% for b in bookings %}
+                <tr>
+                    <td>{{ b.id }}</td>
+                    <td>{{ b.student.full_name }} ({{ b.student.roll_number }})</td>
+                    <td>{{ b.slot.examination.exam_name }}</td>
+                    <td>Slot #{{ b.slot.id }} - {{ b.slot.date }} {{ b.slot.start_time.strftime('%H:%M') }}</td>
+                    <td>{{ b.status }}</td>
+                    <td>
+                        {% if b.status == 'Booked' %}
+                        <form method="POST" action="{{ url_for('admin_reschedule_booking', booking_id=b.id) }}" class="d-flex gap-1">
+                            <select name="new_slot_id" class="form-select form-select-sm w-auto">
+                                {% for s in b.slot.examination.slots if s.available_seats > 0 and s.id != b.slot.id %}
+                                <option value="{{ s.id }}">Slot #{{ s.id }} ({{ s.date }} {{ s.start_time.strftime('%H:%M') }})</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-sm btn-warning">Move</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">Student Dashboard</h3>
+
+<!-- Search Available Exams -->
+<form method="GET" class="row g-2 mb-4">
+    <div class="col-md-10">
+        <input type="text" name="q" value="{{ search_q }}" class="form-control" placeholder="Search available examinations by name, course, or type...">
+    </div>
+    <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
+</form>
+
+<!-- Available Examinations & Slot Booking -->
+<div class="card mb-4">
+    <div class="card-header fw-bold bg-primary text-white">Available Examinations for Slot Booking</div>
+    <div class="card-body">
+        {% for exam in available_exams %}
+        <div class="border rounded p-3 mb-3">
+            <h5>{{ exam.course.course_code }} - {{ exam.exam_name }} <span class="badge bg-secondary">{{ exam.exam_type }}</span></h5>
+            <p class="small text-muted mb-2">Booking Deadline: {{ exam.slot_booking_end.strftime('%Y-%m-%d %H:%M') }} | Max Marks: {{ exam.max_marks }}</p>
+            {% if exam.id in booked_exam_ids %}
+                <div class="alert alert-success py-1 mb-0">You have already booked a slot for this examination.</div>
+            {% else %}
+                <table class="table table-sm table-bordered mb-0">
+                    <thead><tr><th>Date</th><th>Time</th><th>Examiner</th><th>Available Seats</th><th>Action</th></tr></thead>
+                    <tbody>
+                        {% for s in exam.slots if s.status == 'Available' and s.available_seats > 0 %}
+                        <tr>
+                            <td>{{ s.date }}</td>
+                            <td>{{ s.start_time.strftime('%H:%M') }} - {{ s.end_time.strftime('%H:%M') }}</td>
+                            <td>{{ s.examiner.full_name }}</td>
+                            <td>{{ s.available_seats }} / {{ s.max_capacity }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('student_book_slot', slot_id=s.id) }}">
+                                    <button class="btn btn-sm btn-success">Book Slot</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-muted">No open slots available right now.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No examinations are currently open for booking.</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- My Bookings, History & Published Results -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">My Examination Bookings & History</div>
+    <div class="table-responsive">
+        <table class="table table-striped mb-0 align-middle">
+            <thead><tr><th>Exam</th><th>Date & Time</th><th>Examiner</th><th>Status</th><th>Score</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for b in my_bookings %}
+                <tr>
+                    <td>{{ b.slot.examination.exam_name }}</td>
+                    <td>{{ b.slot.date }} ({{ b.slot.start_time.strftime('%H:%M') }})</td>
+                    <td>{{ b.slot.examiner.full_name }}</td>
+                    <td><span class="badge bg-dark">{{ b.status }}</span></td>
+                    <td>{{ b.total_marks_awarded if b.is_published else 'N/A' }}</td>
+                    <td>
+                        {% if b.status == 'Booked' and now <= b.slot.examination.slot_booking_end %}
+                        <form method="POST" action="{{ url_for('student_cancel_booking', booking_id=b.id) }}">
+                            <button class="btn btn-danger btn-sm">Cancel Booking</button>
+                        </form>
+                        {% elif b.is_published %}
+                        <a href="{{ url_for('student_result', booking_id=b.id) }}" class="btn btn-info btn-sm">View Scorecard</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Upcoming Exams Section -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">Upcoming Exams</div>
+    <div class="card-body table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Course ID</th>
+                    <th>Exam Id</th>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Duration</th>
+                    <th>Max Marks</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for exam in upcoming_exams %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ exam.course.course_code }}</td>
+                    <td>{{ exam.exam_name }}</td>
+                    <td>{{ exam.slot_booking_start.strftime('%d %b %Y') }}</td>
+                    <td>{{ exam.exam_type }}</td>
+                    <td>{{ exam.duration_mins }} mins</td>
+                    <td>{{ exam.max_marks }}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-info text-white"
+                                data-bs-toggle="modal" data-bs-target="#examDetailsModal{{ exam.id }}">
+                            View
+                        </button>
+                    </td>
+                </tr>
+
+                <!-- View Full Details Modal -->
+                <div class="modal fade" id="examDetailsModal{{ exam.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">{{ exam.exam_name }} ({{ exam.course.course_code }})</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p><strong>Course Name:</strong> {{ exam.course.course_name }}</p>
+                                <p><strong>Exam Type:</strong> {{ exam.exam_type }}</p>
+                                <p><strong>Duration:</strong> {{ exam.duration_mins }} minutes</p>
+                                <p><strong>Max Marks:</strong> {{ exam.max_marks }}</p>
+                                <p><strong>Status:</strong> {{ exam.status }}</p>
+                                <p class="mb-0"><strong>Booking Window:</strong><br>
+                                    {{ exam.slot_booking_start.strftime('%d %b %Y, %I:%M %p') }} &ndash;
+                                    {{ exam.slot_booking_end.strftime('%d %b %Y, %I:%M %p') }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted">No upcoming exams available.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Edit Profile -->
+<div class="card">
+    <div class="card-header fw-bold">Edit Student Profile</div>
+    <div class="card-body">
+        <form method="POST" class="row g-2">
+            <input type="hidden" name="action" value="update_profile">
+            <div class="col-md-4"><input type="text" name="full_name" value="{{ student.full_name }}" class="form-control" required></div>
+            <div class="col-md-4"><input type="text" name="department" value="{{ student.department }}" class="form-control" required></div>
+            <div class="col-md-3"><input type="text" name="contact" value="{{ student.contact }}" class="form-control" required></div>
+            <div class="col-md-1"><button class="btn btn-dark w-100">Save</button></div>
+        </form>
+    </div>
+</div>
+{% endblock %}

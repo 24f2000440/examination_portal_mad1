@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">Examiner Dashboard</h3>
+
+<div class="row g-3 mb-4 text-center">
+    <div class="col-md-4"><div class="card p-3"><h6>Created Slots</h6><h3>{{ my_slots|length }}</h3></div></div>
+    <div class="col-md-4"><div class="card p-3"><h6>Students Booked</h6><h3>{{ total_booked }}</h3></div></div>
+    <div class="col-md-4"><div class="card p-3"><h6>Pending Evaluations</h6><h3>{{ pending_evals }}</h3></div></div>
+</div>
+
+<!-- Create Examination Slot -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">Create Examination Slot (Active Slot Creation Windows Only)</div>
+    <div class="card-body">
+        {% if open_exams %}
+        <form method="POST" action="{{ url_for('examiner_create_slot') }}" class="row g-2">
+            <div class="col-md-3">
+                <select name="exam_id" class="form-select" required>
+                    {% for e in open_exams %}
+                    <option value="{{ e.id }}">{{ e.course.course_code }} - {{ e.exam_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2"><input type="date" name="date" class="form-control" required></div>
+            <div class="col-md-2"><input type="time" name="start_time" class="form-control" required></div>
+            <div class="col-md-2"><input type="time" name="end_time" class="form-control" required></div>
+            <div class="col-md-2"><input type="number" name="max_capacity" min="1" class="form-control" placeholder="Capacity" required></div>
+            <div class="col-md-1"><button class="btn btn-primary w-100">Add</button></div>
+        </form>
+        {% else %}
+        <p class="text-muted mb-0">No examinations are currently open for slot creation.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- My Slots & Booked Students -->
+{% for slot in my_slots %}
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><strong>{{ slot.examination.exam_name }}</strong> | {{ slot.date }} ({{ slot.start_time.strftime('%H:%M') }} - {{ slot.end_time.strftime('%H:%M') }}) | Seats: {{ slot.available_seats }}/{{ slot.max_capacity }}</span>
+        {% if slot.examination.status != 'Booking Open' and slot.bookings|length == 0 %}
+        <form method="POST" action="{{ url_for('examiner_delete_slot', slot_id=slot.id) }}">
+            <button class="btn btn-danger btn-sm">Delete Slot</button>
+        </form>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <table class="table mb-0 align-middle">
+            <thead><tr><th>Student Name</th><th>Roll No</th><th>Booking Status</th><th>Marks</th><th>Action</th></tr></thead>
+            <tbody>
+                {% for b in slot.bookings if b.status != 'Cancelled' %}
+                <tr>
+                    <td>{{ b.student.full_name }}</td>
+                    <td>{{ b.student.roll_number }}</td>
+                    <td>{{ b.status }}</td>
+                    <td>{{ b.total_marks_awarded if b.total_marks_awarded is not none else 'Pending' }} / {{ slot.examination.max_marks }}</td>
+                    <td>
+                        <a href="{{ url_for('examiner_evaluate', booking_id=b.id) }}" class="btn btn-sm btn-success">
+                            {{ 'Update Evaluation' if b.status == 'Completed' else 'Evaluate Student' }}
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5" class="text-muted text-center">No students booked in this slot yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('student_dashboard') }}" class="btn btn-secondary btn-sm mb-3">&larr; Back to Dashboard</a>
+<div class="card">
+    <div class="card-header bg-success text-white fw-bold">
+        Examination Scorecard: {{ booking.slot.examination.exam_name }}
+    </div>
+    <div class="card-body">
+        <p><strong>Student:</strong> {{ booking.student.full_name }} ({{ booking.student.roll_number }})</p>
+        <p><strong>Examiner:</strong> {{ booking.slot.examiner.full_name }}</p>
+        <table class="table table-bordered">
+            <thead><tr><th>Criterion</th><th>Max Marks</th><th>Marks Awarded</th></tr></thead>
+            <tbody>
+                {% for score in booking.rubric_scores %}
+                <tr>
+                    <td>{{ score.rubric.criterion_name }}</td>
+                    <td>{{ score.rubric.max_marks }}</td>
+                    <td>{{ score.marks_awarded }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="table-secondary fw-bold">
+                    <td>Total</td>
+                    <td>{{ booking.slot.examination.max_marks }}</td>
+                    <td>{{ booking.total_marks_awarded }}</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="alert alert-info mb-0">
+            <strong>Examiner Remarks:</strong> {{ booking.remarks }}
+        </div>
+    </div>
+</div>
+{% endblock %}
